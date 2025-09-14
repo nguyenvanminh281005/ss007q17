@@ -110,11 +110,34 @@ class AttendanceService {
         // Create new record
         await setDoc(doc(db, this.collectionName, docId), {
           ...attendanceData,
-          createdAt: Timestamp.now()
+          createdAt: Timestamp.now(),
+          participationCount: 0 // Initialize with 0
         });
       }
     } catch (error) {
       throw new Error('Không thể lưu điểm danh.');
+    }
+  }
+
+  /**
+   * Update participation count for a student on specific date
+   */
+  async updateParticipation(studentAccount: string, date: Date, participationCount: number, updatedBy: string): Promise<void> {
+    try {
+      const dateString = format(date, 'yyyy-MM-dd');
+      const docId = `${studentAccount}_${dateString}`;
+      
+      // Use set with merge to update participation count
+      await setDoc(doc(db, this.collectionName, docId), {
+        studentAccount,
+        date: dateString,
+        participationCount,
+        updatedAt: Timestamp.now(),
+        updatedBy
+      }, { merge: true });
+      
+    } catch (error) {
+      throw new Error('Không thể cập nhật số lần phát biểu.');
     }
   }
 

@@ -13,6 +13,7 @@ const AttendancePage: React.FC = () => {
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [participation, setParticipation] = useState<Record<string, number>>({});
   const [userPermission, setUserPermission] = useState<StudentPermission | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -84,13 +85,17 @@ const AttendancePage: React.FC = () => {
       const attendanceData = await attendanceService.getAttendanceByDate(today);
       console.log('Attendance loaded:', attendanceData);
       
-      // Convert to lookup object
+      // Convert to lookup objects
       const attendanceLookup: Record<string, boolean> = {};
+      const participationLookup: Record<string, number> = {};
+      
       attendanceData.forEach((record: AttendanceRecord) => {
         attendanceLookup[record.studentAccount] = record.isPresent;
+        participationLookup[record.studentAccount] = record.participationCount || 0;
       });
       
       setAttendance(attendanceLookup);
+      setParticipation(participationLookup);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Không thể tải dữ liệu');
@@ -152,6 +157,53 @@ const AttendancePage: React.FC = () => {
       }));
       
       toast.error('Không thể lưu điểm danh');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleParticipationChange = async (studentAccount: string, count: number) => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error('Vui lòng đăng nhập để cập nhật phát biểu');
+      setShowLoginModal(true);
+      return;
+    }
+
+    // Check if user has permission
+    if (!userPermission?.canMarkAttendance) {
+      toast.error('Bạn không có quyền cập nhật phát biểu');
+      return;
+    }
+    
+    try {
+      setSaving(studentAccount);
+      
+      // Update local state immediately
+      setParticipation(prev => ({
+        ...prev,
+        [studentAccount]: count
+      }));
+      
+      // Save to Firebase
+      await attendanceService.updateParticipation(
+        studentAccount, 
+        today, 
+        count, 
+        user?.uid || 'anonymous'
+      );
+      
+      toast.success(`Đã cập nhật số lần phát biểu cho ${studentAccount}: ${count}`);
+    } catch (error) {
+      console.error('Error saving participation:', error);
+      
+      // Revert local state on error
+      setParticipation(prev => ({
+        ...prev,
+        [studentAccount]: (prev[studentAccount] || 0)
+      }));
+      
+      toast.error('Không thể cập nhật số lần phát biểu');
     } finally {
       setSaving(null);
     }
@@ -309,11 +361,15 @@ const AttendancePage: React.FC = () => {
                       <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         {todayDisplay}
                       </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Số lần phát biểu
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredStudents.map((student, index) => {
                       const isPresent = attendance[student.account] || false;
+                      const participationCount = participation[student.account] || 0;
                       const isSaving = saving === student.account;
                       
                       // Check if this is the first student in a new group
@@ -346,7 +402,7 @@ const AttendancePage: React.FC = () => {
                                   type="checkbox"
                                   checked={isPresent}
                                   onChange={(e) => handleAttendanceChange(student.account, e.target.checked)}
-                                  disabled={!user || !userPermission?.canMarkAttendance} // Disable if not logged in or no permission
+                                  disabled={!user || !userPermission?.canMarkAttendance}
                                   className={`h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded ${
                                     !user || !userPermission?.canMarkAttendance ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                                   }`}
@@ -356,6 +412,29 @@ const AttendancePage: React.FC = () => {
                                   }
                                 />
                               )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleParticipationChange(student.account, Math.max(0, participationCount - 1))}
+                                disabled={!user || !userPermission?.canMarkAttendance || isSaving || participationCount <= 0}
+                                className="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
+                                title="Giảm số lần phát biểu"
+                              >
+                                −
+                              </button>
+                              <span className="w-12 text-center text-sm font-medium text-gray-900">
+                                {participationCount}
+                              </span>
+                              <button
+                                onClick={() => handleParticipationChange(student.account, participationCount + 1)}
+                                disabled={!user || !userPermission?.canMarkAttendance || isSaving}
+                                className="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
+                                title="Tăng số lần phát biểu"
+                              >
+                                +
+                              </button>
                             </div>
                           </td>
                         </tr>

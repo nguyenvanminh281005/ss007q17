@@ -25,6 +25,7 @@ export interface AttendanceRecord {
   studentAccount: string;
   date: string; // Format: YYYY-MM-DD
   isPresent: boolean;
+  participationCount?: number; // Số lần phát biểu
   createdAt: Date;
   updatedAt: Date;
 }

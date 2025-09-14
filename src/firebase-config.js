@@ -1,21 +1,18 @@
-// Import the functions you need from the SDKs you need
+// Import SDK
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase config lấy từ biến môi trường
 const firebaseConfig = {
-  apiKey: "AIzaSyDebDCp-FOJUp18S0F4mxUdnIk7zmbndXE",
-  authDomain: "ss007q17.firebaseapp.com",
-  projectId: "ss007q17",
-  storageBucket: "ss007q17.firebasestorage.app",
-  messagingSenderId: "927529779762",
-  appId: "1:927529779762:web:7645801aa4e99df407f22b",
-  measurementId: "G-XMCH3FP9PZ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
@@ -23,7 +20,7 @@ export const app = initializeApp(firebaseConfig);
 export const analytics = getAnalytics(app);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const appId = "1:927529779762:web:7645801aa4e99df407f22b";
+export const appId = import.meta.env.VITE_FIREBASE_APP_ID;
 
 // Gán biến cấu hình lên window để dùng toàn cục cho ClassroomApp
 window.__firebase_config = JSON.stringify(firebaseConfig);
