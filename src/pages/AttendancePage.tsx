@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
 import { studentService } from '../services/studentService';
 import { attendanceService } from '../services/attendanceService';
 import { permissionService } from '../services/permissionService';
@@ -269,38 +270,48 @@ const AttendancePage: React.FC = () => {
                 </div>
               </div>
               
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {user.displayName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {userPermission?.role === 'teacher' ? 'Giáo viên' : 
-                       userPermission?.role === 'group_leader' ? 'Nhóm trưởng' : 'Sinh viên'}
-                      {user.studentAccount && ` - ${user.studentAccount}`}
-                      {userPermission?.canMarkAttendance && 
-                        <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                          Có quyền điểm danh
-                        </span>
-                      }
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200 transition-colors"
-                  >
-                    Đăng xuất
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowLoginModal(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/attendance/summary"
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
                 >
-                  Đăng nhập điểm danh
-                </button>
-              )}
+                  📊 Tổng kết cuối kỳ
+                </Link>
+                
+                {user ? (
+                  <>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.displayName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {userPermission?.role === 'teacher' ? 'Giáo viên' : 
+                         userPermission?.role === 'group_leader' ? 'Nhóm trưởng' : 'Sinh viên'}
+                        {user.studentAccount && ` - ${user.studentAccount}`}
+                        {userPermission?.canMarkAttendance && 
+                          <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                            Có quyền điểm danh
+                          </span>
+                        }
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                      Đăng xuất
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setShowLoginModal(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Đăng nhập điểm danh
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           

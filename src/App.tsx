@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import AttendancePage from './pages/AttendancePage';
+import AttendanceSummaryPage from './pages/AttendanceSummaryPage';
 import { PermissionManagementPage } from './components/PermissionManagementPage';
 import './index.css';
 
@@ -18,6 +19,7 @@ function App() {
             {/* Main attendance page - always accessible */}
             <Route path="/" element={<AttendancePage />} />
             <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/attendance/summary" element={<AttendanceSummaryPage />} />
             
             {/* Other routes for future */}
             <Route path="/dashboard" element={<Dashboard />} />
