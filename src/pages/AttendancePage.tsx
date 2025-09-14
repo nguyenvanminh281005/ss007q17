@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { studentService } from '../services/studentService';
 import { attendanceService } from '../services/attendanceService';
+import { permissionService } from '../services/permissionService';
 import { useAuth } from '../contexts/AuthContext';
 import LoginModal from '../components/Auth/LoginModal';
 import toast from 'react-hot-toast';
-import type { Student, AttendanceRecord } from '../types';
+import type { Student, AttendanceRecord, StudentPermission } from '../types';
 
 const AttendancePage: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [userPermission, setUserPermission] = useState<StudentPermission | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -23,6 +27,30 @@ const AttendancePage: React.FC = () => {
     loadData();
   }, []);
 
+  // Load user permission when user changes
+  useEffect(() => {
+    if (user?.studentAccount) {
+      loadUserPermission(user.studentAccount);
+    } else {
+      setUserPermission(null);
+    }
+  }, [user]);
+
+  // Filter students based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredStudents(students);
+    } else {
+      const filtered = students.filter(student => 
+        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.surname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.account.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.group.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredStudents(filtered);
+    }
+  }, [students, searchTerm]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -30,11 +58,27 @@ const AttendancePage: React.FC = () => {
       // Load students
       const studentsData = await studentService.getAllStudents();
       console.log('Students loaded:', studentsData);
-      setStudents(studentsData.sort((a, b) => {
-        // Sort by surname first, then name
-        const surnameCompare = a.surname.localeCompare(b.surname);
-        return surnameCompare !== 0 ? surnameCompare : a.name.localeCompare(b.name);
-      }));
+      
+      // Filter out teachers (assuming teachers have specific accounts like 'ldvinh')
+      const studentsList = studentsData.filter(student => {
+        // Keep only students with numeric MSSV and valid group (exclude teachers)
+        return /^\d+$/.test(student.account) && 
+               student.group !== 'nan' && 
+               student.group && 
+               !student.group.toLowerCase().includes('teacher');
+      });
+      
+      // Sort by group first, then by account (MSSV) within group
+      const sortedStudents = studentsList.sort((a, b) => {
+        // First sort by group
+        const groupCompare = a.group.localeCompare(b.group);
+        if (groupCompare !== 0) return groupCompare;
+        
+        // Within same group, sort by account (MSSV)
+        return a.account.localeCompare(b.account);
+      });
+      
+      setStudents(sortedStudents);
       
       // Load today's attendance
       const attendanceData = await attendanceService.getAttendanceByDate(today);
@@ -55,16 +99,30 @@ const AttendancePage: React.FC = () => {
     }
   };
 
+  const loadUserPermission = async (studentAccount: string) => {
+    try {
+      const permission = await permissionService.getPermission(studentAccount);
+      setUserPermission(permission);
+      console.log('User permission loaded:', permission);
+    } catch (error) {
+      console.error('Error loading user permission:', error);
+      setUserPermission(null);
+    }
+  };
+
   const handleAttendanceChange = async (studentAccount: string, isPresent: boolean) => {
-    // Check if user has permission to mark attendance
+    // Check if user is logged in
     if (!user) {
       toast.error('Vui lòng đăng nhập để điểm danh');
       setShowLoginModal(true);
       return;
     }
 
-    // TODO: Add permission check here
-    // For now, allow all logged-in users to mark attendance
+    // Check if user has permission to mark attendance
+    if (!userPermission?.canMarkAttendance) {
+      toast.error('Bạn không có quyền điểm danh');
+      return;
+    }
     
     try {
       setSaving(studentAccount);
@@ -100,7 +158,8 @@ const AttendancePage: React.FC = () => {
   };
 
   const handleLoginSuccess = () => {
-    toast.success('Đã đăng nhập, bạn có thể điểm danh bây giờ!');
+    toast.success('Đã đăng nhập! Đang kiểm tra quyền điểm danh...');
+    // Permission will be loaded automatically by useEffect when user changes
   };
 
   const handleLogout = async () => {
@@ -124,7 +183,7 @@ const AttendancePage: React.FC = () => {
   }
 
   const presentCount = Object.values(attendance).filter(Boolean).length;
-  const totalCount = students.length;
+  const totalCount = filteredStudents.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -142,6 +201,22 @@ const AttendancePage: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm sinh viên, nhóm..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-64 px-4 py-2 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              
               {user ? (
                 <div className="flex items-center gap-3">
                   <div className="text-right">
@@ -149,9 +224,14 @@ const AttendancePage: React.FC = () => {
                       {user.displayName}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {user.role === 'teacher' ? 'Giáo viên' : 
-                       user.role === 'group_leader' ? 'Nhóm trưởng' : 'Sinh viên'}
+                      {userPermission?.role === 'teacher' ? 'Giáo viên' : 
+                       userPermission?.role === 'group_leader' ? 'Nhóm trưởng' : 'Sinh viên'}
                       {user.studentAccount && ` - ${user.studentAccount}`}
+                      {userPermission?.canMarkAttendance && 
+                        <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                          Có quyền điểm danh
+                        </span>
+                      }
                     </p>
                   </div>
                   <button
@@ -196,11 +276,18 @@ const AttendancePage: React.FC = () => {
           <div className="px-4 py-5 sm:p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">
               Danh sách sinh viên
+              {searchTerm && (
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  ({filteredStudents.length} kết quả cho "{searchTerm}")
+                </span>
+              )}
             </h2>
             
-            {students.length === 0 ? (
+            {filteredStudents.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">Không có sinh viên nào trong danh sách</p>
+                <p className="text-gray-500">
+                  {searchTerm ? 'Không tìm thấy kết quả nào' : 'Không có sinh viên nào trong danh sách'}
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -211,13 +298,13 @@ const AttendancePage: React.FC = () => {
                         STT
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nhóm
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Họ và tên
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         MSSV
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nhóm
                       </th>
                       <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         {todayDisplay}
@@ -225,23 +312,30 @@ const AttendancePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {students.map((student, index) => {
+                    {filteredStudents.map((student, index) => {
                       const isPresent = attendance[student.account] || false;
                       const isSaving = saving === student.account;
                       
+                      // Check if this is the first student in a new group
+                      const isFirstInGroup = index === 0 || filteredStudents[index - 1].group !== student.group;
+                      
                       return (
-                        <tr key={student.account} className={isPresent ? 'bg-green-50' : 'bg-white'}>
+                        <tr key={student.account} className={`${isPresent ? 'bg-green-50' : 'bg-white'} ${isFirstInGroup ? 'border-t-2 border-blue-200' : ''}`}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {index + 1}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              isFirstInGroup ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {student.group}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {student.surname} {student.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {student.account}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {student.group}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center">
@@ -252,11 +346,14 @@ const AttendancePage: React.FC = () => {
                                   type="checkbox"
                                   checked={isPresent}
                                   onChange={(e) => handleAttendanceChange(student.account, e.target.checked)}
-                                  disabled={!user} // Disable if not logged in
+                                  disabled={!user || !userPermission?.canMarkAttendance} // Disable if not logged in or no permission
                                   className={`h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded ${
-                                    !user ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                                    !user || !userPermission?.canMarkAttendance ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                                   }`}
-                                  title={!user ? 'Vui lòng đăng nhập để điểm danh' : ''}
+                                  title={
+                                    !user ? 'Vui lòng đăng nhập để điểm danh' : 
+                                    !userPermission?.canMarkAttendance ? 'Bạn không có quyền điểm danh' : ''
+                                  }
                                 />
                               )}
                             </div>

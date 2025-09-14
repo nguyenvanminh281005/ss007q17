@@ -33,11 +33,16 @@ class AttendanceService {
         q = query(q, where('studentAccount', '==', filter.studentAccount));
       }
       
-      // Add ordering
-      q = query(q, orderBy('date', 'desc'), orderBy('studentAccount'));
+      // Simplified ordering - only order by one field to avoid index issues
+      try {
+        q = query(q, orderBy('date', 'desc'));
+      } catch (orderError) {
+        // If ordering fails, continue without it
+        console.warn('Could not apply ordering, continuing without it:', orderError);
+      }
       
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => {
+      const records = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -46,8 +51,18 @@ class AttendanceService {
           updatedAt: data.updatedAt?.toDate() || new Date(),
         } as AttendanceRecord;
       });
+      
+      // Sort in memory if we couldn't order in the query
+      return records.sort((a, b) => {
+        const dateCompare = b.date.localeCompare(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.studentAccount.localeCompare(b.studentAccount);
+      });
+      
     } catch (error) {
-      throw new Error('Không thể tải dữ liệu điểm danh.');
+      console.error('Error in getAttendanceRecords:', error);
+      // Return empty array instead of throwing to prevent app crash
+      return [];
     }
   }
 
@@ -201,14 +216,24 @@ class AttendanceService {
    */
   async getAttendanceDates(): Promise<string[]> {
     try {
-      const querySnapshot = await getDocs(
-        query(collection(db, this.collectionName), orderBy('date', 'desc'))
-      );
+      // Simple query without ordering first
+      let querySnapshot;
+      try {
+        querySnapshot = await getDocs(
+          query(collection(db, this.collectionName), orderBy('date', 'desc'))
+        );
+      } catch (orderError) {
+        // If ordering fails, try without ordering
+        console.warn('Could not order by date, fetching all records:', orderError);
+        querySnapshot = await getDocs(collection(db, this.collectionName));
+      }
       
       const dates = new Set(querySnapshot.docs.map(doc => doc.data().date as string));
-      return Array.from(dates).sort().reverse();
+      const sortedDates = Array.from(dates).sort();
+      return sortedDates.reverse(); // Most recent first
     } catch (error) {
-      throw new Error('Không thể tải danh sách ngày điểm danh.');
+      console.error('Error getting attendance dates:', error);
+      return [];
     }
   }
 }

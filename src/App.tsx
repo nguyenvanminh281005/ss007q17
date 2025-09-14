@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import AttendancePage from './pages/AttendancePage';
+import { PermissionManagementPage } from './components/PermissionManagementPage';
 import './index.css';
 
 // Placeholder components
@@ -21,6 +22,7 @@ function App() {
             {/* Other routes for future */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/grades" element={<GradesPage />} />
+            <Route path="/permissions" element={<PermissionManagementPage />} />
             
             {/* Fallback route */}
             <Route path="*" element={<Navigate to="/" replace />} />

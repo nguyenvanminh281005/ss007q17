@@ -8,6 +8,18 @@ export interface Student {
   group: string;
 }
 
+export interface StudentPermission {
+  id?: string;
+  studentAccount: string;
+  canMarkAttendance: boolean;
+  canEditGrades: boolean;
+  isGroupLeader: boolean;
+  role: 'student' | 'group_leader' | 'teacher';
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy?: string;
+}
+
 export interface AttendanceRecord {
   id?: string;
   studentAccount: string;
