@@ -16,6 +16,7 @@ const AttendancePage: React.FC = () => {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [participation, setParticipation] = useState<Record<string, number>>({});
   const [userPermission, setUserPermission] = useState<StudentPermission | null>(null);
+  const [allPermissions, setAllPermissions] = useState<Record<string, StudentPermission>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -70,13 +71,31 @@ const AttendancePage: React.FC = () => {
                !student.group.toLowerCase().includes('teacher');
       });
       
-      // Sort by group first, then by account (MSSV) within group
+      // Load all permissions first to identify group leaders
+      const permissionsData = await permissionService.getAllPermissions();
+      console.log('Permissions loaded:', permissionsData);
+      
+      // Convert to lookup object
+      const permissionsLookup: Record<string, StudentPermission> = {};
+      permissionsData.forEach(permission => {
+        permissionsLookup[permission.studentAccount] = permission;
+      });
+      setAllPermissions(permissionsLookup);
+      
+      // Sort by group first, then prioritize group leaders, then by account (MSSV) within group
       const sortedStudents = studentsList.sort((a, b) => {
         // First sort by group
         const groupCompare = a.group.localeCompare(b.group);
         if (groupCompare !== 0) return groupCompare;
         
-        // Within same group, sort by account (MSSV)
+        // Within same group, prioritize group leaders first
+        const aIsGroupLeader = permissionsLookup[a.account]?.isGroupLeader || permissionsLookup[a.account]?.role === 'group_leader';
+        const bIsGroupLeader = permissionsLookup[b.account]?.isGroupLeader || permissionsLookup[b.account]?.role === 'group_leader';
+        
+        if (aIsGroupLeader && !bIsGroupLeader) return -1; // a (group leader) comes first
+        if (!aIsGroupLeader && bIsGroupLeader) return 1;  // b (group leader) comes first
+        
+        // If both are group leaders or both are regular students, sort by account (MSSV)
         return a.account.localeCompare(b.account);
       });
       
@@ -399,7 +418,21 @@ const AttendancePage: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {student.surname} {student.name}
+                            <div className="flex items-center gap-2">
+                              <span>{student.surname} {student.name}</span>
+                              {/* Hiển thị icon nhóm trưởng */}
+                              {(allPermissions[student.account]?.isGroupLeader || allPermissions[student.account]?.role === 'group_leader') && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" title="Nhóm trưởng">
+                                  👑 Nhóm trưởng
+                                </span>
+                              )}
+                              {/* Hiển thị icon giáo viên */}
+                              {allPermissions[student.account]?.role === 'teacher' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Giáo viên">
+                                  🎓 Giáo viên
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {student.account}
