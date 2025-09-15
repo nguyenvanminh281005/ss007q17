@@ -336,9 +336,9 @@ const AttendancePage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Link
                   to="/attendance/summary"
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
                 >
-                  📊 Tổng kết cuối kỳ
+                  Tổng kết cuối kỳ
                 </Link>
                 
                 {user ? (
