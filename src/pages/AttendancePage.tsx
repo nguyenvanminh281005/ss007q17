@@ -148,6 +148,17 @@ const AttendancePage: React.FC = () => {
       toast.error('Bạn không có quyền điểm danh');
       return;
     }
+
+    // Check if group leader is trying to mark attendance for someone in their group
+    if (userPermission?.role === 'group_leader' && user.studentAccount) {
+      const currentUserStudent = students.find(s => s.account === user.studentAccount);
+      const targetStudent = students.find(s => s.account === studentAccount);
+      
+      if (currentUserStudent && targetStudent && currentUserStudent.group !== targetStudent.group) {
+        toast.error(`Bạn chỉ có thể điểm danh cho sinh viên trong nhóm ${currentUserStudent.group}`);
+        return;
+      }
+    }
     
     try {
       setSaving(studentAccount);
@@ -195,6 +206,17 @@ const AttendancePage: React.FC = () => {
       toast.error('Bạn không có quyền cập nhật phát biểu');
       return;
     }
+
+    // Check if group leader is trying to update participation for someone in their group
+    if (userPermission?.role === 'group_leader' && user.studentAccount) {
+      const currentUserStudent = students.find(s => s.account === user.studentAccount);
+      const targetStudent = students.find(s => s.account === studentAccount);
+      
+      if (currentUserStudent && targetStudent && currentUserStudent.group !== targetStudent.group) {
+        toast.error(`Bạn chỉ có thể cập nhật phát biểu cho sinh viên trong nhóm ${currentUserStudent.group}`);
+        return;
+      }
+    }
     
     try {
       setSaving(studentAccount);
@@ -227,6 +249,27 @@ const AttendancePage: React.FC = () => {
     } finally {
       setSaving(null);
     }
+  };
+
+  // Helper function to check if current user can interact with target student
+  const canInteractWithStudent = (targetStudentAccount: string): boolean => {
+    // If no user is logged in, no interaction allowed
+    if (!user || !userPermission?.canMarkAttendance) return false;
+    
+    // Teachers can interact with all students
+    if (userPermission.role === 'teacher') return true;
+    
+    // Group leaders can only interact with students in their group
+    if (userPermission.role === 'group_leader' && user.studentAccount) {
+      const currentUserStudent = students.find(s => s.account === user.studentAccount);
+      const targetStudent = students.find(s => s.account === targetStudentAccount);
+      
+      if (currentUserStudent && targetStudent) {
+        return currentUserStudent.group === targetStudent.group;
+      }
+    }
+    
+    return false;
   };
 
   const handleLoginSuccess = () => {
@@ -401,6 +444,7 @@ const AttendancePage: React.FC = () => {
                       const isPresent = attendance[student.account] || false;
                       const participationCount = participation[student.account] || 0;
                       const isSaving = saving === student.account;
+                      const canInteract = canInteractWithStudent(student.account);
                       
                       // Check if this is the first student in a new group
                       const isFirstInGroup = index === 0 || filteredStudents[index - 1].group !== student.group;
@@ -446,13 +490,14 @@ const AttendancePage: React.FC = () => {
                                   type="checkbox"
                                   checked={isPresent}
                                   onChange={(e) => handleAttendanceChange(student.account, e.target.checked)}
-                                  disabled={!user || !userPermission?.canMarkAttendance}
+                                  disabled={!canInteract}
                                   className={`h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded ${
-                                    !user || !userPermission?.canMarkAttendance ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                                    !canInteract ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                                   }`}
                                   title={
                                     !user ? 'Vui lòng đăng nhập để điểm danh' : 
-                                    !userPermission?.canMarkAttendance ? 'Bạn không có quyền điểm danh' : ''
+                                    !userPermission?.canMarkAttendance ? 'Bạn không có quyền điểm danh' : 
+                                    userPermission?.role === 'group_leader' ? 'Bạn chỉ có thể điểm danh cho sinh viên cùng nhóm' : ''
                                   }
                                 />
                               )}
@@ -462,9 +507,14 @@ const AttendancePage: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => handleParticipationChange(student.account, Math.max(0, participationCount - 1))}
-                                disabled={!user || !userPermission?.canMarkAttendance || isSaving || participationCount <= 0}
+                                disabled={!canInteract || isSaving || participationCount <= 0}
                                 className="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
-                                title="Giảm số lần phát biểu"
+                                title={
+                                  !user ? 'Vui lòng đăng nhập để cập nhật phát biểu' :
+                                  !userPermission?.canMarkAttendance ? 'Bạn không có quyền cập nhật phát biểu' :
+                                  userPermission?.role === 'group_leader' ? 'Bạn chỉ có thể cập nhật cho sinh viên cùng nhóm' :
+                                  'Giảm số lần phát biểu'
+                                }
                               >
                                 −
                               </button>
@@ -473,9 +523,14 @@ const AttendancePage: React.FC = () => {
                               </span>
                               <button
                                 onClick={() => handleParticipationChange(student.account, participationCount + 1)}
-                                disabled={!user || !userPermission?.canMarkAttendance || isSaving}
+                                disabled={!canInteract || isSaving}
                                 className="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
-                                title="Tăng số lần phát biểu"
+                                title={
+                                  !user ? 'Vui lòng đăng nhập để cập nhật phát biểu' :
+                                  !userPermission?.canMarkAttendance ? 'Bạn không có quyền cập nhật phát biểu' :
+                                  userPermission?.role === 'group_leader' ? 'Bạn chỉ có thể cập nhật cho sinh viên cùng nhóm' :
+                                  'Tăng số lần phát biểu'
+                                }
                               >
                                 +
                               </button>
