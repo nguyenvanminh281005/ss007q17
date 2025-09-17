@@ -15,6 +15,7 @@ const AttendancePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [participation, setParticipation] = useState<Record<string, number>>({});
+  const [totalParticipationScores, setTotalParticipationScores] = useState<Record<string, number>>({});
   const [userPermission, setUserPermission] = useState<StudentPermission | null>(null);
   const [allPermissions, setAllPermissions] = useState<Record<string, StudentPermission>>({});
   const [loading, setLoading] = useState(true);
@@ -24,16 +25,6 @@ const AttendancePage: React.FC = () => {
   
   const today = new Date();
   const todayDisplay = format(today, 'dd/MM/yyyy');
-
-  // Tính điểm phát biểu theo quy tắc
-  const getParticipationScore = (count: number) => {
-    if (count <= 0) return 0;
-    if (count === 1) return 3;
-    if (count === 2) return 6;
-    if (count === 3) return 9;
-    if (count >= 4) return 10;
-    return 0;
-  };
 
   // Load students and today's attendance
   useEffect(() => {
@@ -114,6 +105,11 @@ const AttendancePage: React.FC = () => {
       // Load today's attendance
       const attendanceData = await attendanceService.getAttendanceByDate(today);
       console.log('Attendance loaded:', attendanceData);
+      
+      // Load total participation scores from all sessions
+      const totalScores = await attendanceService.getTotalParticipationScores();
+      console.log('Total participation scores loaded:', totalScores);
+      setTotalParticipationScores(totalScores);
       
       // Convert to lookup objects
       const attendanceLookup: Record<string, boolean> = {};
@@ -246,6 +242,10 @@ const AttendancePage: React.FC = () => {
       );
       
       toast.success(`Đã cập nhật số lần phát biểu cho ${studentAccount}: ${count}`);
+      
+      // Reload total participation scores to reflect the change
+      const updatedTotalScores = await attendanceService.getTotalParticipationScores();
+      setTotalParticipationScores(updatedTotalScores);
     } catch (error) {
       console.error('Error saving participation:', error);
       
@@ -456,7 +456,7 @@ const AttendancePage: React.FC = () => {
                     {filteredStudents.map((student, index) => {
                       const isPresent = attendance[student.account] || false;
                       const participationCount = participation[student.account] || 0;
-                      const participationScore = getParticipationScore(participationCount);
+                      const totalParticipationScore = totalParticipationScores[student.account] || 0;
                       const isSaving = saving === student.account;
                       const canInteract = canInteractWithStudent(student.account);
                       
@@ -552,7 +552,7 @@ const AttendancePage: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <span className="w-12 text-center text-sm font-bold text-blue-700">
-                              {participationScore}
+                              {totalParticipationScore}
                             </span>
                           </td>
                         </tr>

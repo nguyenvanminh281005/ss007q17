@@ -222,6 +222,46 @@ class AttendanceService {
   }
 
   /**
+   * Get total participation scores for all students across all dates
+   */
+  async getTotalParticipationScores(): Promise<Record<string, number>> {
+    try {
+      const querySnapshot = await getDocs(collection(db, this.collectionName));
+      const records = querySnapshot.docs.map(doc => doc.data() as AttendanceRecord);
+      
+      // Group by student and sum total participation counts first
+      const studentTotalCounts: Record<string, number> = {};
+      
+      records.forEach(record => {
+        if (record.participationCount && record.participationCount > 0) {
+          if (!studentTotalCounts[record.studentAccount]) {
+            studentTotalCounts[record.studentAccount] = 0;
+          }
+          // Sum up all participation counts across all sessions
+          studentTotalCounts[record.studentAccount] += record.participationCount;
+        }
+      });
+      
+      // Convert total counts to scores using the same rule
+      const studentScores: Record<string, number> = {};
+      Object.entries(studentTotalCounts).forEach(([studentAccount, totalCount]) => {
+        let score = 0;
+        if (totalCount === 1) score = 3;
+        else if (totalCount === 2) score = 6;
+        else if (totalCount === 3) score = 9;
+        else if (totalCount >= 4) score = 10; // Max score is 10
+        
+        studentScores[studentAccount] = score;
+      });
+      
+      return studentScores;
+    } catch (error) {
+      console.error('Error getting total participation scores:', error);
+      return {};
+    }
+  }
+
+  /**
    * Delete attendance record
    */
   async deleteAttendance(studentAccount: string, date: Date): Promise<void> {
