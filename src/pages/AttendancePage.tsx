@@ -26,6 +26,39 @@ const AttendancePage: React.FC = () => {
   const today = new Date();
   const todayDisplay = format(today, 'dd/MM/yyyy');
 
+  // Kiểm tra có được phép điểm danh không (chỉ thứ 4, 7-11h VN time)
+  const isAttendanceAllowed = () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 3 = Wednesday
+    const currentHour = now.getHours();
+    
+    // Kiểm tra thứ 4 (day 3) và trong khung giờ 7-11h
+    const isWednesday = dayOfWeek === 3;
+    const isValidTime = currentHour >= 7 && currentHour < 11;
+    
+    return isWednesday && isValidTime;
+  };
+
+  const getAttendanceStatusMessage = () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const currentHour = now.getHours();
+    
+    if (dayOfWeek !== 3) {
+      return "Chỉ được điểm danh vào thứ 4 hàng tuần";
+    }
+    
+    if (currentHour < 7.5) {
+      return "Chỉ được điểm danh từ 7:30 - 10:45";
+    }
+    
+    if (currentHour >= 10.75) {
+      return "Đã hết giờ điểm danh (7:30 - 10:45)";
+    }
+    
+    return "Trong giờ điểm danh";
+  };
+
   // Load students and today's attendance
   useEffect(() => {
     loadData();
@@ -149,6 +182,12 @@ const AttendancePage: React.FC = () => {
       return;
     }
 
+    // Check if attendance is allowed (Wednesday 7-11h)
+    if (!isAttendanceAllowed()) {
+      toast.error(getAttendanceStatusMessage());
+      return;
+    }
+
     // Check if user has permission to mark attendance
     if (!userPermission?.canMarkAttendance) {
       toast.error('Bạn không có quyền điểm danh');
@@ -204,6 +243,12 @@ const AttendancePage: React.FC = () => {
     if (!user) {
       toast.error('Vui lòng đăng nhập để cập nhật phát biểu');
       setShowLoginModal(true);
+      return;
+    }
+
+    // Check if attendance is allowed (Wednesday 7-11h)
+    if (!isAttendanceAllowed()) {
+      toast.error(getAttendanceStatusMessage());
       return;
     }
 
@@ -265,6 +310,9 @@ const AttendancePage: React.FC = () => {
   const canInteractWithStudent = (targetStudentAccount: string): boolean => {
     // If no user is logged in, no interaction allowed
     if (!user || !userPermission?.canMarkAttendance) return false;
+    
+    // Check if attendance is allowed (Wednesday 7-11h)
+    if (!isAttendanceAllowed()) return false;
     
     // Teachers can interact with all students
     if (userPermission.role === 'teacher') return true;
@@ -389,6 +437,24 @@ const AttendancePage: React.FC = () => {
           
           {/* Stats */}
           <div className="mt-4 flex gap-6">
+            {/* Attendance Status */}
+            <div className={`rounded-lg px-4 py-2 ${
+              isAttendanceAllowed() 
+                ? 'bg-green-50 border border-green-200' 
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <p className={`text-sm font-medium ${
+                isAttendanceAllowed() ? 'text-green-900' : 'text-red-900'
+              }`}>
+                Trạng thái điểm danh
+              </p>
+              <p className={`text-lg font-bold ${
+                isAttendanceAllowed() ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {getAttendanceStatusMessage()}
+              </p>
+            </div>
+            
             <div className="bg-blue-50 rounded-lg px-4 py-2">
               <p className="text-sm font-medium text-blue-900">Tổng số sinh viên</p>
               <p className="text-2xl font-bold text-blue-600">{totalCount}</p>
@@ -510,6 +576,7 @@ const AttendancePage: React.FC = () => {
                                   }`}
                                   title={
                                     !user ? 'Vui lòng đăng nhập để điểm danh' : 
+                                    !isAttendanceAllowed() ? getAttendanceStatusMessage() :
                                     !userPermission?.canMarkAttendance ? 'Bạn không có quyền điểm danh' : 
                                     userPermission?.role === 'group_leader' ? 'Bạn chỉ có thể điểm danh cho sinh viên cùng nhóm' : ''
                                   }
@@ -525,6 +592,7 @@ const AttendancePage: React.FC = () => {
                                 className="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
                                 title={
                                   !user ? 'Vui lòng đăng nhập để cập nhật phát biểu' :
+                                  !isAttendanceAllowed() ? getAttendanceStatusMessage() :
                                   !userPermission?.canMarkAttendance ? 'Bạn không có quyền cập nhật phát biểu' :
                                   userPermission?.role === 'group_leader' ? 'Bạn chỉ có thể cập nhật cho sinh viên cùng nhóm' :
                                   'Giảm số lần phát biểu'
@@ -541,6 +609,7 @@ const AttendancePage: React.FC = () => {
                                 className="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
                                 title={
                                   !user ? 'Vui lòng đăng nhập để cập nhật phát biểu' :
+                                  !isAttendanceAllowed() ? getAttendanceStatusMessage() :
                                   !userPermission?.canMarkAttendance ? 'Bạn không có quyền cập nhật phát biểu' :
                                   userPermission?.role === 'group_leader' ? 'Bạn chỉ có thể cập nhật cho sinh viên cùng nhóm' :
                                   'Tăng số lần phát biểu'
