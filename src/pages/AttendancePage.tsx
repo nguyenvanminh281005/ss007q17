@@ -32,7 +32,7 @@ const AttendancePage: React.FC = () => {
     const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 3 = Wednesday
     const currentHour = now.getHours();
     
-    // Kiểm tra thứ 4 (day 3) và trong khung giờ 7-11h
+    // Kiểm tra thứ 4 (day 3) và trong khung giờ 7:30 - 10:45h
     const isWednesday = dayOfWeek === 3;
     const isValidTime = currentHour >= 7 && currentHour < 11;
     
@@ -42,20 +42,23 @@ const AttendancePage: React.FC = () => {
   const getAttendanceStatusMessage = () => {
     const now = new Date();
     const dayOfWeek = now.getDay();
-    const currentHour = now.getHours();
-    
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+
     if (dayOfWeek !== 3) {
       return "Chỉ được điểm danh vào thứ 4 hàng tuần";
     }
-    
-    if (currentHour < 7.5) {
+
+    // Trước 7:30
+    if (hour < 7 || (hour === 7 && minute < 30)) {
       return "Chỉ được điểm danh từ 7:30 - 10:45";
     }
-    
-    if (currentHour >= 10.75) {
+
+    // Sau 10:45
+    if (hour > 10 || (hour === 10 && minute > 45)) {
       return "Đã hết giờ điểm danh (7:30 - 10:45)";
     }
-    
+
     return "Trong giờ điểm danh";
   };
 
