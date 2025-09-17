@@ -25,6 +25,16 @@ const AttendancePage: React.FC = () => {
   const today = new Date();
   const todayDisplay = format(today, 'dd/MM/yyyy');
 
+  // Tính điểm phát biểu theo quy tắc
+  const getParticipationScore = (count: number) => {
+    if (count <= 0) return 0;
+    if (count === 1) return 3;
+    if (count === 2) return 6;
+    if (count === 3) return 9;
+    if (count >= 4) return 10;
+    return 0;
+  };
+
   // Load students and today's attendance
   useEffect(() => {
     loadData();
@@ -437,12 +447,16 @@ const AttendancePage: React.FC = () => {
                       <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Số lần phát biểu
                       </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Điểm phát biểu
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredStudents.map((student, index) => {
                       const isPresent = attendance[student.account] || false;
                       const participationCount = participation[student.account] || 0;
+                      const participationScore = getParticipationScore(participationCount);
                       const isSaving = saving === student.account;
                       const canInteract = canInteractWithStudent(student.account);
                       
@@ -535,6 +549,11 @@ const AttendancePage: React.FC = () => {
                                 +
                               </button>
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="w-12 text-center text-sm font-bold text-blue-700">
+                              {participationScore}
+                            </span>
                           </td>
                         </tr>
                       );
