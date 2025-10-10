@@ -25,3 +25,9 @@ dist-ssr
 
 serviceAccountKey.json
 upload.py
+.env
+setup.py
+setup_permissions.py
+.env.local
+manage_permissions.py
+check_attendance_setup.py
