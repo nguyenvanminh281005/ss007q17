@@ -67,14 +67,16 @@ a. Clone repository về máy của bạn:
 ```bash
 git clone [https://github.com/nguyenvanminh281005/ss007q17.git](https://github.com/nguyenvanminh281005/ss007q17.git)
 cd ss007q17
-
+```
 b. Cài đặt các dependencies:
 
-Bash
+``` bash
 
 npm install
 # HOẶC
 yarn install
+
+```
 3. Thiết lập Firebase
 a. Tạo dự án Firebase:
 
@@ -107,7 +109,7 @@ Trong thư mục gốc của dự án, tạo một tệp mới có tên .env.
 Thêm các biến môi trường với thông tin bạn đã sao chép:
 
 Đoạn mã
-
+``` bash
 VITE_FIREBASE_API_KEY="AIza..."
 VITE_FIREBASE_AUTH_DOMAIN="your-project-id.firebaseapp.com"
 VITE_FIREBASE_PROJECT_ID="your-project-id"
@@ -115,14 +117,16 @@ VITE_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
 VITE_FIREBASE_MESSAGING_SENDER_ID="12345..."
 VITE_FIREBASE_APP_ID="1:12345...:web:..."
 VITE_FIREBASE_MEASUREMENT_ID="G-..."
+```
 4. Chạy ứng dụng
 Sau khi hoàn tất các bước trên, bạn có thể khởi động dự án:
 
-Bash
+``` Bash
 
 npm run dev
 # HOẶC
 yarn dev
+```
 Ứng dụng sẽ chạy tại địa chỉ http://localhost:5173.
 
 📂 Cấu trúc thư mục
