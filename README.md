@@ -130,6 +130,7 @@ yarn dev
 Ứng dụng sẽ chạy tại địa chỉ http://localhost:5173.
 
 📂 Cấu trúc thư mục
+``` bash
 /src
 |-- /components     # Các component tái sử dụng (Auth, Layout, ...)
 |-- /contexts       # React Context (ví dụ: AuthContext)
@@ -139,5 +140,8 @@ yarn dev
 |-- /utils          # Các hàm tiện ích
 |-- App.tsx         # Component gốc của ứng dụng
 |-- main.tsx        # Điểm bắt đầu của ứng dụng React
+```
+
 📄 Giấy phép
+
 Dự án này được cấp phép theo Giấy phép MIT. Xem chi tiết tại tệp LICENSE.
